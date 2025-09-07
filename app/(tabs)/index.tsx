@@ -1,75 +1,177 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
-
-import { HelloWave } from '@/components/HelloWave';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+import React, { useEffect } from 'react';
+import { View, Text, StyleSheet } from 'react-native';
+import { useRouter } from 'expo-router';
+import { useApp } from '../../contexts/AppContext';
+import { getRandomQuote, MOTIVATIONAL_QUOTES } from '../../data/quotes';
 
 export default function HomeScreen() {
+  const router = useRouter();
+  const { state } = useApp();
+  const quote = getRandomQuote(MOTIVATIONAL_QUOTES);
+
+  useEffect(() => {
+    if (!state.isOnboarded) {
+      router.replace('/onboarding');
+    }
+  }, [state.isOnboarded, router]);
+
+  if (!state.isOnboarded) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.loadingText}>Cargando...</Text>
+      </View>
+    );
+  }
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.title}>¡Bienvenido de nuevo!</Text>
+        <Text style={styles.subtitle}>Welcome back!</Text>
+      </View>
+
+      <View style={styles.quoteContainer}>
+        <Text style={styles.quoteText}>"{quote.text}"</Text>
+        <Text style={styles.quoteTranslation}>"{quote.translation}"</Text>
+        <Text style={styles.quoteAuthor}>— {quote.author}</Text>
+      </View>
+
+      {state.userProfile && (
+        <View style={styles.profileSection}>
+          <Text style={styles.profileTitle}>Tu Plan de Estudio</Text>
+          <Text style={styles.profileDetail}>
+            {state.userProfile.schedule.daysPerWeek} días por semana, {state.userProfile.schedule.minutesPerDay} minutos por día
+          </Text>
+        </View>
+      )}
+
+      <View style={styles.actionsContainer}>
+        <Text style={styles.actionsTitle}>¿Qué te gustaría hacer hoy?</Text>
+        <Text style={styles.actionsSubtitle}>What would you like to do today?</Text>
+        
+        <View style={styles.actionButton}>
+          <Text style={styles.actionButtonText}>📚 Comenzar Práctica / Start Practice</Text>
+        </View>
+        
+        <View style={styles.actionButton}>
+          <Text style={styles.actionButtonText}>📊 Ver Progreso / View Progress</Text>
+        </View>
+        
+        <View style={styles.actionButton}>
+          <Text style={styles.actionButtonText}>📝 Revisión Semanal / Weekly Review</Text>
+        </View>
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  container: {
+    flex: 1,
+    backgroundColor: '#FFF5E6',
+    paddingHorizontal: 20,
+    paddingVertical: 60,
   },
-  stepContainer: {
-    gap: 8,
+  header: {
+    alignItems: 'center',
+    marginBottom: 30,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#D2691E',
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  subtitle: {
+    fontSize: 20,
+    color: '#8B4513',
+    textAlign: 'center',
+  },
+  quoteContainer: {
+    backgroundColor: '#FDF5E6',
+    padding: 20,
+    borderRadius: 15,
+    marginBottom: 30,
+    borderLeftWidth: 4,
+    borderLeftColor: '#FF8C00',
+  },
+  quoteText: {
+    fontSize: 16,
+    fontStyle: 'italic',
+    color: '#8B4513',
+    textAlign: 'center',
     marginBottom: 8,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  quoteTranslation: {
+    fontSize: 14,
+    color: '#A0522D',
+    textAlign: 'center',
+    marginBottom: 10,
+  },
+  quoteAuthor: {
+    fontSize: 12,
+    color: '#D2691E',
+    textAlign: 'center',
+    fontWeight: '600',
+  },
+  profileSection: {
+    backgroundColor: '#E8F5E8',
+    padding: 20,
+    borderRadius: 15,
+    marginBottom: 30,
+    borderLeftWidth: 4,
+    borderLeftColor: '#4CAF50',
+  },
+  profileTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#2E7D32',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  profileDetail: {
+    fontSize: 16,
+    color: '#2E7D32',
+    textAlign: 'center',
+  },
+  actionsContainer: {
+    flex: 1,
+  },
+  actionsTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#D2691E',
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  actionsSubtitle: {
+    fontSize: 16,
+    color: '#8B4513',
+    textAlign: 'center',
+    marginBottom: 30,
+  },
+  actionButton: {
+    backgroundColor: '#FF8C00',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderRadius: 15,
+    marginBottom: 15,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  actionButtonText: {
+    color: '#FFF',
+    fontSize: 18,
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  loadingText: {
+    fontSize: 18,
+    color: '#8B4513',
+    textAlign: 'center',
   },
 });
