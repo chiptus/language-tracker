@@ -118,5 +118,5 @@ export interface AppState {
   userProfile: UserProfile | null;
   currentWeekData: WeeklyData | null;
   progressData: ProgressData;
-  isOnboarded: boolean;
+  isOnboarded: boolean | null;
 }

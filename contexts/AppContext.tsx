@@ -30,7 +30,7 @@ const initialState: AppState = {
     weeklyHistory: [],
     currentMotivation: 'Neutral',
   },
-  isOnboarded: false,
+  isOnboarded: null, // null means we haven't loaded the state yet
 };
 
 function appReducer(state: AppState, action: AppAction): AppState {

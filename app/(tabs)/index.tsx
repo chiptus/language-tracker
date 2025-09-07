@@ -1,26 +1,25 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { useRouter } from 'expo-router';
+import { Redirect } from 'expo-router';
 import { useApp } from '../../contexts/AppContext';
 import { getRandomQuote, MOTIVATIONAL_QUOTES } from '../../data/quotes';
 
 export default function HomeScreen() {
-  const router = useRouter();
   const { state } = useApp();
   const quote = getRandomQuote(MOTIVATIONAL_QUOTES);
 
-  useEffect(() => {
-    if (!state.isOnboarded) {
-      router.replace('/onboarding');
-    }
-  }, [state.isOnboarded, router]);
-
-  if (!state.isOnboarded) {
+  // Show loading while app state is loading
+  if (state.isOnboarded === null || state.isOnboarded === undefined) {
     return (
       <View style={styles.container}>
         <Text style={styles.loadingText}>Cargando...</Text>
       </View>
     );
+  }
+
+  // Redirect to onboarding if not completed
+  if (!state.isOnboarded) {
+    return <Redirect href="/onboarding" />;
   }
 
   return (
