@@ -34,8 +34,6 @@ export default function Timer({
           const newElapsed = prevElapsed + 1;
           const newRemaining = totalSeconds - newElapsed;
           
-          onTimeUpdate(newElapsed);
-          
           // Timer completed (show alert only once when crossing the threshold)
           if (newRemaining <= 0 && prevElapsed < totalSeconds) {
             Alert.alert(
@@ -47,6 +45,9 @@ export default function Timer({
               ]
             );
           }
+          
+          // Call onTimeUpdate outside of the setState callback
+          setTimeout(() => onTimeUpdate(newElapsed), 0);
           
           return newElapsed;
         });
