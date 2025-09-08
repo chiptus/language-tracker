@@ -7,12 +7,14 @@ import Timer from './Timer';
 interface DailyPracticeTrackerProps {
   dailyPractice: DailyPractice;
   dailyGoals: DailyPractice; // Goals distributed per day
+  todaysPlannedMinutes: DailyPractice; // Today's planned minutes from schedule
   onUpdatePractice: (practice: DailyPractice) => Promise<void>;
 }
 
 export default function DailyPracticeTracker({ 
   dailyPractice, 
   dailyGoals, 
+  todaysPlannedMinutes,
   onUpdatePractice 
 }: DailyPracticeTrackerProps) {
   const [activeSkill, setActiveSkill] = useState<SkillType | null>(null);
@@ -163,7 +165,7 @@ export default function DailyPracticeTracker({
           
           <Timer
             isRunning={isTimerRunning}
-            targetMinutes={Math.round(dailyGoals[activeSkill] / 4)} // Suggest 1/4 of daily goal as session length
+            targetMinutes={todaysPlannedMinutes[activeSkill] || Math.round(dailyGoals[activeSkill] / 4)} // Use today's planned minutes
             onTimeUpdate={handleTimeUpdate}
             onStart={handleTimerStart}
             onPause={handleTimerPause}
@@ -223,6 +225,11 @@ export default function DailyPracticeTracker({
                     <Text style={styles.skillTime}>
                       {dailyPractice[skill]} / {dailyGoals[skill]} min
                     </Text>
+                    {todaysPlannedMinutes[skill] !== dailyGoals[skill] && (
+                      <Text style={styles.plannedTime}>
+                        Hoy: {todaysPlannedMinutes[skill]} min
+                      </Text>
+                    )}
                   </View>
                 </View>
                 <View style={styles.skillStatus}>
@@ -413,6 +420,12 @@ const styles = StyleSheet.create({
   skillTime: {
     fontSize: 14,
     color: '#A0522D',
+  },
+  plannedTime: {
+    fontSize: 12,
+    color: '#2196F3',
+    fontWeight: '600',
+    fontStyle: 'italic',
   },
   skillStatus: {
     alignItems: 'center',

@@ -1,6 +1,6 @@
 import { Redirect, router } from "expo-router";
 import React from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View, ScrollView } from "react-native";
 import { useApp } from "../../contexts/AppContext";
 import { getRandomQuote, MOTIVATIONAL_QUOTES } from "../../data/quotes";
 
@@ -24,62 +24,68 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>¡Bienvenido de nuevo!</Text>
-        <Text style={styles.subtitle}>Welcome back!</Text>
-      </View>
-
-      <View style={styles.quoteContainer}>
-        <Text style={styles.quoteText}>&quot;{quote.text}&quot;</Text>
-        <Text style={styles.quoteTranslation}>
-          &quot;{quote.translation}&quot;
-        </Text>
-        <Text style={styles.quoteAuthor}>— {quote.author}</Text>
-      </View>
-
-      {state.userProfile && (
-        <View style={styles.profileSection}>
-          <Text style={styles.profileTitle}>Tu Plan de Estudio</Text>
-          <Text style={styles.profileDetail}>
-            {state.userProfile.schedule.daysPerWeek} días por semana,{" "}
-            {state.userProfile.schedule.minutesPerDay} minutos por día
-          </Text>
+      <ScrollView 
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.contentContainer}
+      >
+        <View style={styles.header}>
+          <Text style={styles.title}>¡Bienvenido de nuevo!</Text>
+          <Text style={styles.subtitle}>Welcome back!</Text>
         </View>
-      )}
 
-      <View style={styles.actionsContainer}>
-        <Text style={styles.actionsTitle}>¿Qué te gustaría hacer hoy?</Text>
-        <Text style={styles.actionsSubtitle}>
-          What would you like to do today?
-        </Text>
-
-        <Pressable
-          style={styles.actionButton}
-          onPress={() => router.push("/(tabs)/practice")}
-        >
-          <Text style={styles.actionButtonText}>
-            📚 Comenzar Práctica / Start Practice
+        <View style={styles.quoteContainer}>
+          <Text style={styles.quoteText}>&quot;{quote.text}&quot;</Text>
+          <Text style={styles.quoteTranslation}>
+            &quot;{quote.translation}&quot;
           </Text>
-        </Pressable>
+          <Text style={styles.quoteAuthor}>— {quote.author}</Text>
+        </View>
 
-        <Pressable
-          style={styles.actionButton}
-          onPress={() => router.push("/(tabs)/progress")}
-        >
-          <Text style={styles.actionButtonText}>
-            📊 Ver Progreso / View Progress
-          </Text>
-        </Pressable>
+        {state.userProfile && (
+          <View style={styles.profileSection}>
+            <Text style={styles.profileTitle}>Tu Plan de Estudio</Text>
+            <Text style={styles.profileDetail}>
+              {state.userProfile.schedule.daysPerWeek} días por semana,{" "}
+              {state.userProfile.schedule.minutesPerDay} minutos por día
+            </Text>
+          </View>
+        )}
 
-        <Pressable
-          style={styles.actionButton}
-          onPress={() => router.push("/(tabs)/schedule")}
-        >
-          <Text style={styles.actionButtonText}>
-            📅 Ver Horario / View Schedule
+        <View style={styles.actionsContainer}>
+          <Text style={styles.actionsTitle}>¿Qué te gustaría hacer hoy?</Text>
+          <Text style={styles.actionsSubtitle}>
+            What would you like to do today?
           </Text>
-        </Pressable>
-      </View>
+
+          <Pressable
+            style={styles.actionButton}
+            onPress={() => router.push("/(tabs)/practice")}
+          >
+            <Text style={styles.actionButtonText}>
+              📚 Comenzar Práctica / Start Practice
+            </Text>
+          </Pressable>
+
+          <Pressable
+            style={styles.actionButton}
+            onPress={() => router.push("/(tabs)/progress")}
+          >
+            <Text style={styles.actionButtonText}>
+              📊 Ver Progreso / View Progress
+            </Text>
+          </Pressable>
+
+          <Pressable
+            style={styles.actionButton}
+            onPress={() => router.push("/(tabs)/schedule")}
+          >
+            <Text style={styles.actionButtonText}>
+              📅 Ver Horario / View Schedule
+            </Text>
+          </Pressable>
+        </View>
+      </ScrollView>
     </View>
   );
 }
@@ -88,8 +94,14 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#FFF5E6",
+  },
+  scrollView: {
+    flex: 1,
+  },
+  contentContainer: {
     paddingHorizontal: 20,
-    paddingVertical: 60,
+    paddingTop: 60,
+    paddingBottom: 20,
   },
   header: {
     alignItems: "center",
@@ -155,7 +167,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   actionsContainer: {
-    flex: 1,
+    marginBottom: 20,
   },
   actionsTitle: {
     fontSize: 20,
