@@ -40,7 +40,7 @@ export default function Timer({
           if (newRemaining <= 0 && prevElapsed < totalSeconds) {
             Alert.alert(
               '¡Tiempo completado! / Time\'s up!',
-              `¡Excelente trabajo! Has completado ${selectedMinutes} minutos de práctica. Puedes continuar o guardar tu sesión. / Great job! You\'ve completed ${selectedMinutes} minutes of practice. You can continue or save your session.`,
+              `¡Excelente trabajo! Has completado ${selectedMinutes} minutos de práctica. Puedes continuar o guardar tu sesión. / Great job! You've completed ${selectedMinutes} minutes of practice. You can continue or save your session.`,
               [
                 { text: 'Continuar / Continue', style: 'default' },
                 { text: 'Guardar / Save', onPress: onComplete }
@@ -298,7 +298,6 @@ const styles = StyleSheet.create({
   progressBar: {
     height: '100%',
     borderRadius: 4,
-    transition: 'width 0.3s ease',
   },
   overtimeBar: {
     position: 'absolute',

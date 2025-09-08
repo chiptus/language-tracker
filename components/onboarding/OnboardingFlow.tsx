@@ -4,7 +4,7 @@ import WelcomeScreen from './WelcomeScreen';
 import SkillPriorityStep from './SkillPriorityStep';
 import SchedulePlanningStep from './SchedulePlanningStep';
 import GoalVisualizationStep from './GoalVisualizationStep';
-import { SkillPercentages, Schedule, UserProfile } from '../../types';
+import { SkillPercentages, Schedule, UserProfile, WeeklySchedulePlan } from '../../types';
 import { calculateWeeklyGoals } from '../../utils/calculations';
 
 interface OnboardingFlowProps {
@@ -44,7 +44,7 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
     setCurrentStep('schedule');
   };
 
-  const handleComplete = (startDate: string) => {
+  const handleComplete = (startDate: string, customPlan?: WeeklySchedulePlan) => {
     if (!skillPercentages || !schedule) return;
 
     const weeklyGoals = calculateWeeklyGoals(skillPercentages, schedule);
@@ -54,6 +54,7 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
       schedule,
       startDate,
       weeklyGoals,
+      weeklySchedulePlan: customPlan,
     };
 
     onComplete(userProfile);

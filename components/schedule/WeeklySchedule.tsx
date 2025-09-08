@@ -1,15 +1,16 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
-import { WeeklyGoals, Schedule, SkillPercentages, SKILLS, DAYS_OF_WEEK, DayOfWeek } from '../../types';
+import { WeeklyGoals, Schedule, SkillPercentages, WeeklySchedulePlan, SKILLS, DAYS_OF_WEEK, DayOfWeek } from '../../types';
 import { formatMinutesToHours } from '../../utils/calculations';
 
 interface WeeklyScheduleProps {
   weeklyGoals: WeeklyGoals;
   schedule: Schedule;
   skillPercentages: SkillPercentages;
+  customPlan: WeeklySchedulePlan;
 }
 
-export default function WeeklySchedule({ weeklyGoals, schedule, skillPercentages }: WeeklyScheduleProps) {
+export default function WeeklySchedule({ weeklyGoals, schedule, skillPercentages, customPlan }: WeeklyScheduleProps) {
   const getSkillLabel = (skill: keyof SkillPercentages): string => {
     const labels = {
       listening: 'Escuchar',
@@ -35,26 +36,21 @@ export default function WeeklySchedule({ weeklyGoals, schedule, skillPercentages
     return labels[day];
   };
 
-  // Generate daily breakdown based on weekly goals and schedule
+  // Generate daily breakdown from custom plan
   const generateDailySchedule = () => {
-    const activeDays = DAYS_OF_WEEK.slice(0, schedule.daysPerWeek);
-    
-    return activeDays.map((day) => {
-      const daySkills = SKILLS.filter(skill => weeklyGoals[skill] > 0).map(skill => {
-        const dailyMinutes = Math.round(weeklyGoals[skill] / schedule.daysPerWeek);
-        return {
-          skill,
-          minutes: dailyMinutes,
-          percentage: skillPercentages[skill],
-        };
-      }).filter(item => item.minutes > 0);
+    return DAYS_OF_WEEK.map((day) => {
+      const daySkills = SKILLS.filter(skill => customPlan[day][skill] > 0).map(skill => ({
+        skill,
+        minutes: customPlan[day][skill],
+        percentage: skillPercentages[skill],
+      }));
 
       return {
         day,
         skills: daySkills,
         totalMinutes: daySkills.reduce((sum, item) => sum + item.minutes, 0),
       };
-    });
+    }).filter(dayData => dayData.totalMinutes > 0);
   };
 
   const dailySchedule = generateDailySchedule();
@@ -63,8 +59,8 @@ export default function WeeklySchedule({ weeklyGoals, schedule, skillPercentages
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       <View style={styles.header}>
-        <Text style={styles.title}>Horario Semanal Personalizado</Text>
-        <Text style={styles.subtitle}>Your Personalized Weekly Schedule</Text>
+        <Text style={styles.title}>Tu Horario Semanal</Text>
+        <Text style={styles.subtitle}>Your Weekly Schedule</Text>
         
         <View style={styles.summaryCard}>
           <Text style={styles.summaryTitle}>Resumen Total</Text>
@@ -157,7 +153,22 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: '#8B4513',
     textAlign: 'center',
+    marginBottom: 10,
+  },
+  customBadge: {
+    backgroundColor: '#E3F2FD',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 15,
     marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#2196F3',
+  },
+  customBadgeText: {
+    fontSize: 14,
+    color: '#2196F3',
+    fontWeight: '600',
+    textAlign: 'center',
   },
   summaryCard: {
     backgroundColor: '#FDF5E6',

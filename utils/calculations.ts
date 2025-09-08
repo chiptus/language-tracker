@@ -5,6 +5,9 @@ import {
   SuccessRates,
   WeeklyGoals,
   WeeklyPractice,
+  WeeklySchedulePlan,
+  SKILLS,
+  DAYS_OF_WEEK,
 } from "../types";
 
 export function calculateWeeklyGoals(
@@ -168,4 +171,39 @@ export function getEmptyWeeklyPractice(): WeeklyPractice {
     saturday: getEmptyDailyPractice(),
     sunday: getEmptyDailyPractice(),
   };
+}
+
+export function generateDefaultSchedulePlan(
+  skillPercentages: SkillPercentages,
+  schedule: Schedule
+): WeeklySchedulePlan {
+  const weeklyGoals = calculateWeeklyGoals(skillPercentages, schedule);
+  const activeDays = DAYS_OF_WEEK.slice(0, schedule.daysPerWeek);
+  
+  // Create empty plan
+  const plan: WeeklySchedulePlan = {
+    monday: getEmptyDailyPractice(),
+    tuesday: getEmptyDailyPractice(),
+    wednesday: getEmptyDailyPractice(),
+    thursday: getEmptyDailyPractice(),
+    friday: getEmptyDailyPractice(),
+    saturday: getEmptyDailyPractice(),
+    sunday: getEmptyDailyPractice(),
+  };
+
+  // Distribute each skill evenly across active days
+  SKILLS.forEach(skill => {
+    const goalMinutes = weeklyGoals[skill];
+    if (goalMinutes > 0) {
+      const baseMinutesPerDay = Math.floor(goalMinutes / activeDays.length);
+      const extraMinutes = goalMinutes % activeDays.length;
+
+      activeDays.forEach((day, index) => {
+        const minutes = baseMinutesPerDay + (index < extraMinutes ? 1 : 0);
+        plan[day][skill] = minutes;
+      });
+    }
+  });
+
+  return plan;
 }

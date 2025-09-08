@@ -1,12 +1,13 @@
-import React from "react";
+import React, { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { Schedule, SkillPercentages, SKILLS } from "../../types";
-import { calculateWeeklyGoals } from "../../utils/calculations";
+import { Schedule, SkillPercentages, WeeklySchedulePlan, SKILLS } from "../../types";
+import { calculateWeeklyGoals, generateDefaultSchedulePlan } from "../../utils/calculations";
+import SchedulePlanner from "../schedule/SchedulePlanner";
 
 interface GoalVisualizationStepProps {
   skillPercentages: SkillPercentages;
   schedule: Schedule;
-  onComplete: (startDate: string) => void;
+  onComplete: (startDate: string, customPlan?: WeeklySchedulePlan) => void;
   onBack: () => void;
 }
 
@@ -17,9 +18,31 @@ export default function GoalVisualizationStep({
   onBack,
 }: GoalVisualizationStepProps) {
   const startDate = new Date().toISOString().split("T")[0];
-
+  const [showSchedulePlanner, setShowSchedulePlanner] = useState(false);
+  
   const weeklyGoals = calculateWeeklyGoals(skillPercentages, schedule);
   const totalWeeklyMinutes = schedule.daysPerWeek * schedule.minutesPerDay;
+  
+  // Create default schedule plan as starting point
+  const [customPlan, setCustomPlan] = useState<WeeklySchedulePlan>(() => 
+    generateDefaultSchedulePlan(skillPercentages, schedule)
+  );
+
+  const handleSavePlan = (plan: WeeklySchedulePlan) => {
+    setCustomPlan(plan);
+    setShowSchedulePlanner(false);
+  };
+
+  if (showSchedulePlanner) {
+    return (
+      <SchedulePlanner
+        weeklyGoals={weeklyGoals}
+        existingPlan={customPlan}
+        onSavePlan={handleSavePlan}
+        onCancel={() => setShowSchedulePlanner(false)}
+      />
+    );
+  }
 
   const getSkillLabel = (skill: keyof SkillPercentages): string => {
     const labels = {
@@ -43,7 +66,7 @@ export default function GoalVisualizationStep({
   };
 
   const handleComplete = () => {
-    onComplete(startDate);
+    onComplete(startDate, customPlan);
   };
 
   return (
@@ -122,6 +145,26 @@ export default function GoalVisualizationStep({
               </View>
             );
           })}
+        </View>
+
+        {/* Schedule Customization Option */}
+        <View style={styles.scheduleCustomSection}>
+          <Text style={styles.customizeTitle}>Personalizar Horario / Customize Schedule</Text>
+          <Text style={styles.customizeDescription}>
+            El horario mostrado distribuye tus minutos automáticamente. ¿Quieres personalizarlo?
+          </Text>
+          <Text style={styles.customizeDescriptionEn}>
+            The schedule shown distributes your minutes automatically. Want to customize it?
+          </Text>
+          
+          <Pressable 
+            style={styles.customizeButton}
+            onPress={() => setShowSchedulePlanner(true)}
+          >
+            <Text style={styles.customizeButtonText}>
+              📅 Personalizar Mi Horario / Customize My Schedule
+            </Text>
+          </Pressable>
         </View>
 
         <View style={styles.motivationSection}>
@@ -284,6 +327,45 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "bold",
     color: "#2196F3",
+  },
+  scheduleCustomSection: {
+    backgroundColor: "#E3F2FD",
+    padding: 20,
+    borderRadius: 15,
+    borderLeftWidth: 4,
+    borderLeftColor: "#2196F3",
+    marginBottom: 20,
+  },
+  customizeTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#1976D2",
+    textAlign: "center",
+    marginBottom: 10,
+  },
+  customizeDescription: {
+    fontSize: 14,
+    color: "#1976D2",
+    textAlign: "center",
+    marginBottom: 4,
+  },
+  customizeDescriptionEn: {
+    fontSize: 12,
+    color: "#2196F3",
+    textAlign: "center",
+    marginBottom: 15,
+  },
+  customizeButton: {
+    backgroundColor: "#2196F3",
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+    alignItems: "center",
+  },
+  customizeButtonText: {
+    color: "#FFF",
+    fontSize: 14,
+    fontWeight: "bold",
   },
   motivationSection: {
     backgroundColor: "#FFF3E0",

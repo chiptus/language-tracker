@@ -21,11 +21,22 @@ export interface WeeklyGoals {
   pronunciation: number;
 }
 
+export interface WeeklySchedulePlan {
+  monday: DailyPractice;
+  tuesday: DailyPractice;
+  wednesday: DailyPractice;
+  thursday: DailyPractice;
+  friday: DailyPractice;
+  saturday: DailyPractice;
+  sunday: DailyPractice;
+}
+
 export interface UserProfile {
   skillPercentages: SkillPercentages;
   schedule: Schedule;
   startDate: string;
   weeklyGoals: WeeklyGoals;
+  weeklySchedulePlan?: WeeklySchedulePlan; // Optional flexible schedule
 }
 
 export interface DailyPractice {
