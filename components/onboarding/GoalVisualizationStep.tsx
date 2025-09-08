@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, Pressable, ScrollView } from 'react-native';
-import { SkillPercentages, Schedule, WeeklyGoals, SKILLS } from '../../types';
-import { calculateWeeklyGoals } from '../../utils/calculations';
+import React from "react";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Schedule, SkillPercentages, SKILLS } from "../../types";
+import { calculateWeeklyGoals } from "../../utils/calculations";
 
 interface GoalVisualizationStepProps {
   skillPercentages: SkillPercentages;
@@ -10,25 +10,25 @@ interface GoalVisualizationStepProps {
   onBack: () => void;
 }
 
-export default function GoalVisualizationStep({ 
-  skillPercentages, 
-  schedule, 
-  onComplete, 
-  onBack 
+export default function GoalVisualizationStep({
+  skillPercentages,
+  schedule,
+  onComplete,
+  onBack,
 }: GoalVisualizationStepProps) {
-  const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
-  
+  const startDate = new Date().toISOString().split("T")[0];
+
   const weeklyGoals = calculateWeeklyGoals(skillPercentages, schedule);
   const totalWeeklyMinutes = schedule.daysPerWeek * schedule.minutesPerDay;
 
   const getSkillLabel = (skill: keyof SkillPercentages): string => {
     const labels = {
-      listening: 'Escuchar / Listening',
-      reading: 'Leer / Reading', 
-      writing: 'Escribir / Writing',
-      speaking: 'Hablar / Speaking',
-      fluency: 'Fluidez / Fluency',
-      pronunciation: 'Pronunciación / Pronunciation',
+      listening: "Escuchar / Listening",
+      reading: "Leer / Reading",
+      writing: "Escribir / Writing",
+      speaking: "Hablar / Speaking",
+      fluency: "Fluidez / Fluency",
+      pronunciation: "Pronunciación / Pronunciation",
     };
     return labels[skill];
   };
@@ -61,42 +61,58 @@ export default function GoalVisualizationStep({
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.summarySection}>
-          <Text style={styles.sectionTitle}>Resumen del Horario / Schedule Summary</Text>
+          <Text style={styles.sectionTitle}>
+            Resumen del Horario / Schedule Summary
+          </Text>
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>Días por semana:</Text>
             <Text style={styles.summaryValue}>{schedule.daysPerWeek} días</Text>
           </View>
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>Minutos por día:</Text>
-            <Text style={styles.summaryValue}>{schedule.minutesPerDay} min</Text>
+            <Text style={styles.summaryValue}>
+              {schedule.minutesPerDay} min
+            </Text>
           </View>
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>Total semanal:</Text>
-            <Text style={styles.summaryValue}>{formatMinutes(totalWeeklyMinutes)}</Text>
+            <Text style={styles.summaryValue}>
+              {formatMinutes(totalWeeklyMinutes)}
+            </Text>
           </View>
         </View>
 
         <View style={styles.goalsSection}>
-          <Text style={styles.sectionTitle}>Objetivos Semanales / Weekly Goals</Text>
+          <Text style={styles.sectionTitle}>
+            Objetivos Semanales / Weekly Goals
+          </Text>
           {SKILLS.map((skill) => (
             <View key={skill} style={styles.goalRow}>
               <View style={styles.goalInfo}>
                 <Text style={styles.goalSkill}>{getSkillLabel(skill)}</Text>
-                <Text style={styles.goalPercentage}>{skillPercentages[skill]}%</Text>
+                <Text style={styles.goalPercentage}>
+                  {skillPercentages[skill]}%
+                </Text>
               </View>
-              <Text style={styles.goalTime}>{formatMinutes(weeklyGoals[skill])}</Text>
+              <Text style={styles.goalTime}>
+                {formatMinutes(weeklyGoals[skill])}
+              </Text>
             </View>
           ))}
         </View>
 
         <View style={styles.scheduleSection}>
-          <Text style={styles.sectionTitle}>Horario Semanal Sugerido / Suggested Weekly Schedule</Text>
+          <Text style={styles.sectionTitle}>
+            Horario Semanal Sugerido / Suggested Weekly Schedule
+          </Text>
           <Text style={styles.scheduleNote}>
             Basado en {schedule.daysPerWeek} días de estudio por semana:
           </Text>
-          
-          {SKILLS.filter(skill => weeklyGoals[skill] > 0).map((skill) => {
-            const minutesPerDay = Math.round(weeklyGoals[skill] / schedule.daysPerWeek);
+
+          {SKILLS.filter((skill) => weeklyGoals[skill] > 0).map((skill) => {
+            const minutesPerDay = Math.round(
+              weeklyGoals[skill] / schedule.daysPerWeek,
+            );
             return (
               <View key={skill} style={styles.scheduleRow}>
                 <Text style={styles.scheduleSkill}>{getSkillLabel(skill)}</Text>
@@ -111,12 +127,14 @@ export default function GoalVisualizationStep({
         <View style={styles.motivationSection}>
           <Text style={styles.motivationTitle}>¡Tu Journey Comienza Hoy!</Text>
           <Text style={styles.motivationText}>
-            Con esta dedicación constante, estarás en camino hacia la fluidez en español. 
-            Recuerda: la consistencia es más importante que la perfección.
+            Con esta dedicación constante, estarás en camino hacia la fluidez en
+            español. Recuerda: la consistencia es más importante que la
+            perfección.
           </Text>
           <Text style={styles.motivationTextEn}>
-            With this consistent dedication, you'll be on your way to Spanish fluency. 
-            Remember: consistency is more important than perfection.
+            With this consistent dedication, you&apos;ll be on your way to
+            Spanish fluency. Remember: consistency is more important than
+            perfection.
           </Text>
         </View>
       </ScrollView>
@@ -125,7 +143,7 @@ export default function GoalVisualizationStep({
         <Pressable style={styles.backButton} onPress={onBack}>
           <Text style={styles.backButtonText}>← Atrás</Text>
         </Pressable>
-        
+
         <Pressable style={styles.completeButton} onPress={handleComplete}>
           <Text style={styles.completeButtonText}>¡Comenzar Journey!</Text>
         </Pressable>
@@ -137,195 +155,195 @@ export default function GoalVisualizationStep({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFF5E6',
+    backgroundColor: "#FFF5E6",
     paddingHorizontal: 20,
     paddingVertical: 40,
   },
   header: {
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: 20,
   },
   title: {
     fontSize: 24,
-    fontWeight: 'bold',
-    color: '#D2691E',
-    textAlign: 'center',
+    fontWeight: "bold",
+    color: "#D2691E",
+    textAlign: "center",
     marginBottom: 4,
   },
   subtitle: {
     fontSize: 18,
-    color: '#8B4513',
-    textAlign: 'center',
+    color: "#8B4513",
+    textAlign: "center",
     marginBottom: 15,
   },
   description: {
     fontSize: 16,
-    color: '#8B4513',
-    textAlign: 'center',
+    color: "#8B4513",
+    textAlign: "center",
     marginBottom: 5,
   },
   descriptionEn: {
     fontSize: 14,
-    color: '#A0522D',
-    textAlign: 'center',
+    color: "#A0522D",
+    textAlign: "center",
   },
   content: {
     flex: 1,
   },
   summarySection: {
-    backgroundColor: '#FDF5E6',
+    backgroundColor: "#FDF5E6",
     borderRadius: 15,
     padding: 20,
     marginBottom: 20,
     borderLeftWidth: 4,
-    borderLeftColor: '#FF8C00',
+    borderLeftColor: "#FF8C00",
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#D2691E',
+    fontWeight: "bold",
+    color: "#D2691E",
     marginBottom: 15,
-    textAlign: 'center',
+    textAlign: "center",
   },
   summaryRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 8,
   },
   summaryLabel: {
     fontSize: 16,
-    color: '#8B4513',
+    color: "#8B4513",
   },
   summaryValue: {
     fontSize: 16,
-    fontWeight: 'bold',
-    color: '#FF8C00',
+    fontWeight: "bold",
+    color: "#FF8C00",
   },
   goalsSection: {
-    backgroundColor: '#E8F5E8',
+    backgroundColor: "#E8F5E8",
     borderRadius: 15,
     padding: 20,
     marginBottom: 20,
     borderLeftWidth: 4,
-    borderLeftColor: '#4CAF50',
+    borderLeftColor: "#4CAF50",
   },
   goalRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 12,
     paddingBottom: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#DDD',
+    borderBottomColor: "#DDD",
   },
   goalInfo: {
     flex: 1,
   },
   goalSkill: {
     fontSize: 15,
-    color: '#2E7D32',
-    fontWeight: '500',
+    color: "#2E7D32",
+    fontWeight: "500",
   },
   goalPercentage: {
     fontSize: 12,
-    color: '#4CAF50',
-    fontWeight: '600',
+    color: "#4CAF50",
+    fontWeight: "600",
   },
   goalTime: {
     fontSize: 16,
-    fontWeight: 'bold',
-    color: '#2E7D32',
+    fontWeight: "bold",
+    color: "#2E7D32",
   },
   scheduleSection: {
-    backgroundColor: '#E3F2FD',
+    backgroundColor: "#E3F2FD",
     borderRadius: 15,
     padding: 20,
     marginBottom: 20,
     borderLeftWidth: 4,
-    borderLeftColor: '#2196F3',
+    borderLeftColor: "#2196F3",
   },
   scheduleNote: {
     fontSize: 14,
-    color: '#1976D2',
+    color: "#1976D2",
     marginBottom: 15,
-    fontStyle: 'italic',
+    fontStyle: "italic",
   },
   scheduleRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 8,
   },
   scheduleSkill: {
     fontSize: 15,
-    color: '#1976D2',
+    color: "#1976D2",
     flex: 1,
   },
   scheduleTime: {
     fontSize: 14,
-    fontWeight: 'bold',
-    color: '#2196F3',
+    fontWeight: "bold",
+    color: "#2196F3",
   },
   motivationSection: {
-    backgroundColor: '#FFF3E0',
+    backgroundColor: "#FFF3E0",
     borderRadius: 15,
     padding: 20,
     borderWidth: 2,
-    borderColor: '#FFB74D',
-    alignItems: 'center',
+    borderColor: "#FFB74D",
+    alignItems: "center",
   },
   motivationTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
-    color: '#F57C00',
+    fontWeight: "bold",
+    color: "#F57C00",
     marginBottom: 15,
-    textAlign: 'center',
+    textAlign: "center",
   },
   motivationText: {
     fontSize: 16,
-    color: '#E65100',
-    textAlign: 'center',
+    color: "#E65100",
+    textAlign: "center",
     lineHeight: 22,
     marginBottom: 10,
   },
   motivationTextEn: {
     fontSize: 14,
-    color: '#FF8F00',
-    textAlign: 'center',
+    color: "#FF8F00",
+    textAlign: "center",
     lineHeight: 20,
-    fontStyle: 'italic',
+    fontStyle: "italic",
   },
   buttonContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
     marginTop: 20,
   },
   backButton: {
-    backgroundColor: '#DDD',
+    backgroundColor: "#DDD",
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 20,
   },
   backButtonText: {
-    color: '#666',
+    color: "#666",
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   completeButton: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: "#4CAF50",
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 20,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
     elevation: 5,
   },
   completeButtonText: {
-    color: '#FFF',
+    color: "#FFF",
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
 });

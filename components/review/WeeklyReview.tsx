@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, Alert } from 'react-native';
-import { WeeklyData, WeeklyGoals, MOTIVATION_LEVELS, MotivationLevel } from '../../types';
+import { WeeklyData, WeeklyGoals, MOTIVATION_LEVELS } from '../../types';
 import { formatMinutesToHours, calculateTotalWeeklyMinutes, calculateAverageSuccessRate } from '../../utils/calculations';
 import { getQuoteForWeek } from '../../data/quotes';
 

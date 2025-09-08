@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useApp } from '../../contexts/AppContext';
-import { getCurrentWeekNumber, getEmptyDailyPractice } from '../../utils/calculations';
+import { getEmptyDailyPractice } from '../../utils/calculations';
 import DailyPracticeTracker from '../../components/practice/DailyPracticeTracker';
 import { DailyPractice } from '../../types';
 
@@ -27,7 +27,7 @@ export default function PracticeScreen() {
     if (!state.currentWeekData || !state.userProfile) return;
 
     // Get current day of week
-    const today = new Date().toLocaleDateString('en-US', { weekday: 'lowercase' });
+    const today = new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
     const dayKey = today as keyof typeof state.currentWeekData.dailyPractice;
 
     const updatedWeekData = {
@@ -55,7 +55,7 @@ export default function PracticeScreen() {
   }
 
   // Get today's practice data
-  const today = new Date().toLocaleDateString('en-US', { weekday: 'lowercase' });
+  const today = new Date().toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
   const dayKey = today as keyof typeof state.currentWeekData.dailyPractice;
   const todaysPractice = state.currentWeekData.dailyPractice[dayKey] || getEmptyDailyPractice();
 

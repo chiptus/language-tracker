@@ -1,13 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, Alert } from 'react-native';
-import { SkillType, DailyPractice, WeeklyGoals, SKILLS } from '../../types';
+import { SkillType, DailyPractice, SKILLS } from '../../types';
 import { formatMinutesToHours } from '../../utils/calculations';
 import Timer from './Timer';
 
 interface DailyPracticeTrackerProps {
   dailyPractice: DailyPractice;
   dailyGoals: DailyPractice; // Goals distributed per day
-  onUpdatePractice: (practice: DailyPractice) => void;
+  onUpdatePractice: (practice: DailyPractice) => Promise<void>;
 }
 
 export default function DailyPracticeTracker({ 
@@ -83,7 +83,7 @@ export default function DailyPracticeTracker({
     setCurrentSession(seconds);
   };
 
-  const saveSession = () => {
+  const saveSession = async () => {
     if (!activeSkill || currentSession < 60) {
       Alert.alert(
         'Sesión muy corta',
@@ -99,16 +99,24 @@ export default function DailyPracticeTracker({
       [activeSkill]: dailyPractice[activeSkill] + minutes,
     };
 
-    onUpdatePractice(updatedPractice);
-    
-    Alert.alert(
-      '¡Sesión Guardada!',
-      `Se han agregado ${minutes} minuto${minutes !== 1 ? 's' : ''} de ${getSkillLabel(activeSkill)}.`,
-      [{ text: 'Continuar', onPress: () => {
-        setCurrentSession(0);
-        setIsTimerRunning(false);
-      }}]
-    );
+    try {
+      await onUpdatePractice(updatedPractice);
+      
+      Alert.alert(
+        '¡Sesión Guardada!',
+        `Se han agregado ${minutes} minuto${minutes !== 1 ? 's' : ''} de ${getSkillLabel(activeSkill)}.`,
+        [{ text: 'Continuar', onPress: () => {
+          setCurrentSession(0);
+          setIsTimerRunning(false);
+        }}]
+      );
+    } catch {
+      Alert.alert(
+        'Error',
+        'No se pudo guardar la sesión. Intenta de nuevo.',
+        [{ text: 'OK' }]
+      );
+    }
   };
 
   const getProgressPercentage = (skill: SkillType): number => {
@@ -155,11 +163,14 @@ export default function DailyPracticeTracker({
           
           <Timer
             isRunning={isTimerRunning}
-            initialSeconds={currentSession}
+            targetMinutes={Math.round(dailyGoals[activeSkill] / 4)} // Suggest 1/4 of daily goal as session length
             onTimeUpdate={handleTimeUpdate}
             onStart={handleTimerStart}
             onPause={handleTimerPause}
             onReset={handleTimerReset}
+            onComplete={() => {
+              saveSession();
+            }}
           />
           
           <View style={styles.sessionActions}>
