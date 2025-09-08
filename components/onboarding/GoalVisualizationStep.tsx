@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Schedule, SkillPercentages, WeeklySchedulePlan, SKILLS } from "../../types";
 import { calculateWeeklyGoals, generateDefaultSchedulePlan } from "../../utils/calculations";
-import SchedulePlanner from "../schedule/SchedulePlanner";
+import ScheduleTable from "../schedule/ScheduleTable";
 
 interface GoalVisualizationStepProps {
   skillPercentages: SkillPercentages;
@@ -18,7 +18,6 @@ export default function GoalVisualizationStep({
   onBack,
 }: GoalVisualizationStepProps) {
   const startDate = new Date().toISOString().split("T")[0];
-  const [showSchedulePlanner, setShowSchedulePlanner] = useState(false);
   
   const weeklyGoals = calculateWeeklyGoals(skillPercentages, schedule);
   const totalWeeklyMinutes = schedule.daysPerWeek * schedule.minutesPerDay;
@@ -28,21 +27,6 @@ export default function GoalVisualizationStep({
     generateDefaultSchedulePlan(skillPercentages, schedule)
   );
 
-  const handleSavePlan = (plan: WeeklySchedulePlan) => {
-    setCustomPlan(plan);
-    setShowSchedulePlanner(false);
-  };
-
-  if (showSchedulePlanner) {
-    return (
-      <SchedulePlanner
-        weeklyGoals={weeklyGoals}
-        existingPlan={customPlan}
-        onSavePlan={handleSavePlan}
-        onCancel={() => setShowSchedulePlanner(false)}
-      />
-    );
-  }
 
   const getSkillLabel = (skill: keyof SkillPercentages): string => {
     const labels = {
@@ -83,6 +67,13 @@ export default function GoalVisualizationStep({
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        {/* Schedule Table at the top */}
+        <ScheduleTable 
+          weeklyGoals={weeklyGoals}
+          initialPlan={customPlan}
+          onPlanChange={setCustomPlan}
+        />
+
         <View style={styles.summarySection}>
           <Text style={styles.sectionTitle}>
             Resumen del Horario / Schedule Summary
@@ -122,49 +113,6 @@ export default function GoalVisualizationStep({
               </Text>
             </View>
           ))}
-        </View>
-
-        <View style={styles.scheduleSection}>
-          <Text style={styles.sectionTitle}>
-            Horario Semanal Sugerido / Suggested Weekly Schedule
-          </Text>
-          <Text style={styles.scheduleNote}>
-            Basado en {schedule.daysPerWeek} días de estudio por semana:
-          </Text>
-
-          {SKILLS.filter((skill) => weeklyGoals[skill] > 0).map((skill) => {
-            const minutesPerDay = Math.round(
-              weeklyGoals[skill] / schedule.daysPerWeek,
-            );
-            return (
-              <View key={skill} style={styles.scheduleRow}>
-                <Text style={styles.scheduleSkill}>{getSkillLabel(skill)}</Text>
-                <Text style={styles.scheduleTime}>
-                  ~{minutesPerDay} min/día
-                </Text>
-              </View>
-            );
-          })}
-        </View>
-
-        {/* Schedule Customization Option */}
-        <View style={styles.scheduleCustomSection}>
-          <Text style={styles.customizeTitle}>Personalizar Horario / Customize Schedule</Text>
-          <Text style={styles.customizeDescription}>
-            El horario mostrado distribuye tus minutos automáticamente. ¿Quieres personalizarlo?
-          </Text>
-          <Text style={styles.customizeDescriptionEn}>
-            The schedule shown distributes your minutes automatically. Want to customize it?
-          </Text>
-          
-          <Pressable 
-            style={styles.customizeButton}
-            onPress={() => setShowSchedulePlanner(true)}
-          >
-            <Text style={styles.customizeButtonText}>
-              📅 Personalizar Mi Horario / Customize My Schedule
-            </Text>
-          </Pressable>
         </View>
 
         <View style={styles.motivationSection}>
