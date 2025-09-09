@@ -124,3 +124,4 @@ A comprehensive React Native (Expo) application for tracking Spanish language le
 - Success rates calculated automatically
 - Export functionality can be added later
 - Multi-language support ready for expansion
+- files shouldn't be bigger than 150 loc. if they are refactor them

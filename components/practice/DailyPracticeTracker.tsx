@@ -1,8 +1,24 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, Alert } from 'react-native';
-import { SkillType, DailyPractice, SKILLS } from '../../types';
-import { formatMinutesToHours } from '../../utils/calculations';
-import Timer from './Timer';
+import React, { useEffect, useState } from "react";
+import {
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
+import { DailyPractice, SKILLS, SkillType } from "../../types";
+import {
+  cancelNotification,
+  createInitialTimerState,
+  getElapsedTime,
+  getTimerState,
+  initializeBackgroundTimer,
+  saveTimerState,
+  scheduleCompletionNotification,
+} from "../../utils/backgroundTimer";
+import { formatMinutesToHours } from "../../utils/calculations";
+import Timer from "./Timer";
 
 interface DailyPracticeTrackerProps {
   dailyPractice: DailyPractice;
@@ -11,36 +27,41 @@ interface DailyPracticeTrackerProps {
   onUpdatePractice: (practice: DailyPractice) => Promise<void>;
 }
 
-export default function DailyPracticeTracker({ 
-  dailyPractice, 
-  dailyGoals, 
+export default function DailyPracticeTracker({
+  dailyPractice,
+  dailyGoals,
   todaysPlannedMinutes,
-  onUpdatePractice 
+  onUpdatePractice,
 }: DailyPracticeTrackerProps) {
   const [activeSkill, setActiveSkill] = useState<SkillType | null>(null);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   const [currentSession, setCurrentSession] = useState(0);
 
+  // Initialize background timer on component mount
+  useEffect(() => {
+    initializeBackgroundTimer();
+  }, []);
+
   const getSkillLabel = (skill: SkillType): string => {
     const labels = {
-      listening: 'Escuchar / Listening',
-      reading: 'Leer / Reading', 
-      writing: 'Escribir / Writing',
-      speaking: 'Hablar / Speaking',
-      fluency: 'Fluidez / Fluency',
-      pronunciation: 'Pronunciación / Pronunciation',
+      listening: "Escuchar / Listening",
+      reading: "Leer / Reading",
+      writing: "Escribir / Writing",
+      speaking: "Hablar / Speaking",
+      fluency: "Fluidez / Fluency",
+      pronunciation: "Pronunciación / Pronunciation",
     };
     return labels[skill];
   };
 
   const getSkillEmoji = (skill: SkillType): string => {
     const emojis = {
-      listening: '🎧',
-      reading: '📖',
-      writing: '✍️',
-      speaking: '🗣',
-      fluency: '💬',
-      pronunciation: '🔊',
+      listening: "🎧",
+      reading: "📖",
+      writing: "✍️",
+      speaking: "🗣",
+      fluency: "💬",
+      pronunciation: "🔊",
     };
     return emojis[skill];
   };
@@ -48,19 +69,19 @@ export default function DailyPracticeTracker({
   const startSkillSession = (skill: SkillType) => {
     if (activeSkill && activeSkill !== skill) {
       Alert.alert(
-        'Cambiar Habilidad',
+        "Cambiar Habilidad",
         `¿Quieres cambiar de ${getSkillLabel(activeSkill)} a ${getSkillLabel(skill)}?`,
         [
-          { text: 'Cancelar', style: 'cancel' },
-          { 
-            text: 'Cambiar', 
+          { text: "Cancelar", style: "cancel" },
+          {
+            text: "Cambiar",
             onPress: () => {
               setActiveSkill(skill);
               setCurrentSession(0);
               setIsTimerRunning(false);
-            }
+            },
           },
-        ]
+        ],
       );
       return;
     }
@@ -68,17 +89,105 @@ export default function DailyPracticeTracker({
     setCurrentSession(0);
   };
 
-  const handleTimerStart = () => {
+  const handleTimerStart = async () => {
+    if (!activeSkill) return;
+
     setIsTimerRunning(true);
+
+    // Get current timer state and update it for start
+    const currentState = await getTimerState();
+    if (currentState) {
+      const now = Date.now();
+
+      let updatedState;
+      if (!currentState.startTime) {
+        // First start - set start time and schedule notification
+        const targetMinutes =
+          todaysPlannedMinutes[activeSkill] ||
+          Math.round(dailyGoals[activeSkill] / 4);
+        const notificationId = await scheduleCompletionNotification(
+          targetMinutes * 60 * 1000,
+          getSkillLabel(activeSkill),
+        );
+
+        updatedState = {
+          ...currentState,
+          isRunning: true,
+          startTime: now,
+          scheduledNotificationId: notificationId,
+        };
+      } else {
+        // Resume from pause - add to paused duration
+        const pauseDuration = currentState.pauseStartTime
+          ? now - currentState.pauseStartTime
+          : 0;
+        const remainingMs =
+          currentState.targetDurationMs - getElapsedTime(currentState);
+
+        // Schedule notification for remaining time
+        let notificationId = null;
+        if (remainingMs > 0) {
+          notificationId = await scheduleCompletionNotification(
+            remainingMs,
+            getSkillLabel(activeSkill),
+          );
+        }
+
+        updatedState = {
+          ...currentState,
+          isRunning: true,
+          totalPausedDuration: currentState.totalPausedDuration + pauseDuration,
+          pauseStartTime: null,
+          scheduledNotificationId: notificationId,
+        };
+      }
+
+      await saveTimerState(updatedState);
+    }
   };
 
-  const handleTimerPause = () => {
+  const handleTimerPause = async () => {
     setIsTimerRunning(false);
+
+    // Update timer state for pause
+    const currentState = await getTimerState();
+    if (currentState) {
+      // Cancel scheduled notification
+      if (currentState.scheduledNotificationId) {
+        await cancelNotification(currentState.scheduledNotificationId);
+      }
+
+      const updatedState = {
+        ...currentState,
+        isRunning: false,
+        pauseStartTime: Date.now(),
+        scheduledNotificationId: null,
+      };
+
+      await saveTimerState(updatedState);
+    }
   };
 
-  const handleTimerReset = () => {
+  const handleTimerReset = async () => {
     setCurrentSession(0);
     setIsTimerRunning(false);
+
+    // Cancel any scheduled notification and reset timer state
+    const currentState = await getTimerState();
+    if (currentState?.scheduledNotificationId) {
+      await cancelNotification(currentState.scheduledNotificationId);
+    }
+
+    if (activeSkill) {
+      const targetMinutes =
+        todaysPlannedMinutes[activeSkill] ||
+        Math.round(dailyGoals[activeSkill] / 4);
+      const newState = createInitialTimerState(
+        targetMinutes,
+        getSkillLabel(activeSkill),
+      );
+      await saveTimerState(newState);
+    }
   };
 
   const handleTimeUpdate = (seconds: number) => {
@@ -88,9 +197,9 @@ export default function DailyPracticeTracker({
   const saveSession = async () => {
     if (!activeSkill || currentSession < 60) {
       Alert.alert(
-        'Sesión muy corta',
-        'Las sesiones deben ser de al menos 1 minuto para ser guardadas.',
-        [{ text: 'OK' }]
+        "Sesión muy corta",
+        "Las sesiones deben ser de al menos 1 minuto para ser guardadas.",
+        [{ text: "OK" }],
       );
       return;
     }
@@ -103,21 +212,24 @@ export default function DailyPracticeTracker({
 
     try {
       await onUpdatePractice(updatedPractice);
-      
+
       Alert.alert(
-        '¡Sesión Guardada!',
-        `Se han agregado ${minutes} minuto${minutes !== 1 ? 's' : ''} de ${getSkillLabel(activeSkill)}.`,
-        [{ text: 'Continuar', onPress: () => {
-          setCurrentSession(0);
-          setIsTimerRunning(false);
-        }}]
+        "¡Sesión Guardada!",
+        `Se han agregado ${minutes} minuto${minutes !== 1 ? "s" : ""} de ${getSkillLabel(activeSkill)}.`,
+        [
+          {
+            text: "Continuar",
+            onPress: () => {
+              setCurrentSession(0);
+              setIsTimerRunning(false);
+            },
+          },
+        ],
       );
     } catch {
-      Alert.alert(
-        'Error',
-        'No se pudo guardar la sesión. Intenta de nuevo.',
-        [{ text: 'OK' }]
-      );
+      Alert.alert("Error", "No se pudo guardar la sesión. Intenta de nuevo.", [
+        { text: "OK" },
+      ]);
     }
   };
 
@@ -128,7 +240,10 @@ export default function DailyPracticeTracker({
   };
 
   const getTotalPracticed = (): number => {
-    return Object.values(dailyPractice).reduce((sum, minutes) => sum + minutes, 0);
+    return Object.values(dailyPractice).reduce(
+      (sum, minutes) => sum + minutes,
+      0,
+    );
   };
 
   const getTotalGoal = (): number => {
@@ -139,19 +254,22 @@ export default function DailyPracticeTracker({
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       <View style={styles.header}>
         <Text style={styles.title}>Práctica de Hoy</Text>
-        <Text style={styles.subtitle}>Today's Practice</Text>
-        
+        <Text style={styles.subtitle}>Today&apos;s Practice</Text>
+
         <View style={styles.totalProgress}>
           <Text style={styles.totalLabel}>Progreso Total del Día</Text>
           <Text style={styles.totalTime}>
-            {formatMinutesToHours(getTotalPracticed())} / {formatMinutesToHours(getTotalGoal())}
+            {formatMinutesToHours(getTotalPracticed())} /{" "}
+            {formatMinutesToHours(getTotalGoal())}
           </Text>
           <View style={styles.totalProgressBar}>
-            <View 
+            <View
               style={[
-                styles.totalProgressFill, 
-                { width: `${Math.min((getTotalPracticed() / getTotalGoal()) * 100, 100)}%` }
-              ]} 
+                styles.totalProgressFill,
+                {
+                  width: `${Math.min((getTotalPracticed() / getTotalGoal()) * 100, 100)}%`,
+                },
+              ]}
             />
           </View>
         </View>
@@ -162,10 +280,14 @@ export default function DailyPracticeTracker({
           <Text style={styles.activeSkillTitle}>
             {getSkillEmoji(activeSkill)} {getSkillLabel(activeSkill)}
           </Text>
-          
+
           <Timer
             isRunning={isTimerRunning}
-            targetMinutes={todaysPlannedMinutes[activeSkill] || Math.round(dailyGoals[activeSkill] / 4)} // Use today's planned minutes
+            targetMinutes={
+              todaysPlannedMinutes[activeSkill] ||
+              Math.round(dailyGoals[activeSkill] / 4)
+            } // Use today's planned minutes
+            skillType={getSkillLabel(activeSkill)}
             onTimeUpdate={handleTimeUpdate}
             onStart={handleTimerStart}
             onPause={handleTimerPause}
@@ -174,9 +296,9 @@ export default function DailyPracticeTracker({
               saveSession();
             }}
           />
-          
+
           <View style={styles.sessionActions}>
-            <Pressable 
+            <Pressable
               style={[styles.actionButton, styles.saveButton]}
               onPress={saveSession}
               disabled={currentSession < 60}
@@ -185,8 +307,8 @@ export default function DailyPracticeTracker({
                 Guardar Sesión ({Math.floor(currentSession / 60)} min)
               </Text>
             </Pressable>
-            
-            <Pressable 
+
+            <Pressable
               style={[styles.actionButton, styles.cancelButton]}
               onPress={() => {
                 setActiveSkill(null);
@@ -202,13 +324,13 @@ export default function DailyPracticeTracker({
 
       <View style={styles.skillsSection}>
         <Text style={styles.sectionTitle}>Selecciona una Habilidad</Text>
-        
-        {SKILLS.filter(skill => dailyGoals[skill] > 0).map((skill) => {
+
+        {SKILLS.filter((skill) => dailyGoals[skill] > 0).map((skill) => {
           const progress = getProgressPercentage(skill);
           const isComplete = progress >= 100;
-          
+
           return (
-            <Pressable 
+            <Pressable
               key={skill}
               style={[
                 styles.skillCard,
@@ -234,19 +356,21 @@ export default function DailyPracticeTracker({
                 </View>
                 <View style={styles.skillStatus}>
                   {isComplete && <Text style={styles.completeIcon}>✅</Text>}
-                  <Text style={styles.progressText}>{Math.round(progress)}%</Text>
+                  <Text style={styles.progressText}>
+                    {Math.round(progress)}%
+                  </Text>
                 </View>
               </View>
-              
+
               <View style={styles.progressBar}>
-                <View 
+                <View
                   style={[
                     styles.progressFill,
-                    { 
+                    {
                       width: `${progress}%`,
-                      backgroundColor: isComplete ? '#4CAF50' : '#FF8C00'
-                    }
-                  ]} 
+                      backgroundColor: isComplete ? "#4CAF50" : "#FF8C00",
+                    },
+                  ]}
                 />
               </View>
             </Pressable>
@@ -257,9 +381,15 @@ export default function DailyPracticeTracker({
       <View style={styles.tipsSection}>
         <Text style={styles.tipsTitle}>💡 Consejos de Práctica</Text>
         <Text style={styles.tipText}>• Usa auriculares para listening</Text>
-        <Text style={styles.tipText}>• Habla en voz alta para speaking y pronunciation</Text>
-        <Text style={styles.tipText}>• Toma descansos entre habilidades diferentes</Text>
-        <Text style={styles.tipText}>• Practica en un ambiente sin distracciones</Text>
+        <Text style={styles.tipText}>
+          • Habla en voz alta para speaking y pronunciation
+        </Text>
+        <Text style={styles.tipText}>
+          • Toma descansos entre habilidades diferentes
+        </Text>
+        <Text style={styles.tipText}>
+          • Practica en un ambiente sin distracciones
+        </Text>
       </View>
     </ScrollView>
   );
@@ -268,77 +398,77 @@ export default function DailyPracticeTracker({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFF5E6',
+    backgroundColor: "#FFF5E6",
   },
   header: {
     padding: 20,
-    alignItems: 'center',
+    alignItems: "center",
   },
   title: {
     fontSize: 28,
-    fontWeight: 'bold',
-    color: '#D2691E',
-    textAlign: 'center',
+    fontWeight: "bold",
+    color: "#D2691E",
+    textAlign: "center",
     marginBottom: 4,
   },
   subtitle: {
     fontSize: 20,
-    color: '#8B4513',
-    textAlign: 'center',
+    color: "#8B4513",
+    textAlign: "center",
     marginBottom: 20,
   },
   totalProgress: {
-    backgroundColor: '#FDF5E6',
+    backgroundColor: "#FDF5E6",
     borderRadius: 15,
     padding: 20,
-    width: '100%',
-    alignItems: 'center',
+    width: "100%",
+    alignItems: "center",
     borderLeftWidth: 4,
-    borderLeftColor: '#FF8C00',
+    borderLeftColor: "#FF8C00",
   },
   totalLabel: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#8B4513',
+    fontWeight: "600",
+    color: "#8B4513",
     marginBottom: 8,
   },
   totalTime: {
     fontSize: 20,
-    fontWeight: 'bold',
-    color: '#D2691E',
+    fontWeight: "bold",
+    color: "#D2691E",
     marginBottom: 10,
   },
   totalProgressBar: {
-    width: '100%',
+    width: "100%",
     height: 8,
-    backgroundColor: '#DDD',
+    backgroundColor: "#DDD",
     borderRadius: 4,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   totalProgressFill: {
-    height: '100%',
-    backgroundColor: '#FF8C00',
+    height: "100%",
+    backgroundColor: "#FF8C00",
     borderRadius: 4,
   },
   activeSession: {
-    backgroundColor: '#E3F2FD',
+    backgroundColor: "#E3F2FD",
     marginHorizontal: 20,
     borderRadius: 15,
     padding: 20,
     marginBottom: 20,
     borderWidth: 2,
-    borderColor: '#2196F3',
+    borderColor: "#2196F3",
   },
   activeSkillTitle: {
     fontSize: 24,
-    fontWeight: 'bold',
-    color: '#1976D2',
-    textAlign: 'center',
+    fontWeight: "bold",
+    color: "#1976D2",
+    textAlign: "center",
     marginBottom: 15,
   },
   sessionActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
     marginTop: 15,
     gap: 10,
   },
@@ -346,23 +476,23 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 12,
     borderRadius: 10,
-    alignItems: 'center',
+    alignItems: "center",
   },
   saveButton: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: "#4CAF50",
   },
   saveButtonText: {
-    color: '#FFF',
+    color: "#FFF",
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   cancelButton: {
-    backgroundColor: '#FF6B6B',
+    backgroundColor: "#FF6B6B",
   },
   cancelButtonText: {
-    color: '#FFF',
+    color: "#FFF",
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   skillsSection: {
     paddingHorizontal: 20,
@@ -370,38 +500,38 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
-    color: '#D2691E',
-    textAlign: 'center',
+    fontWeight: "bold",
+    color: "#D2691E",
+    textAlign: "center",
     marginBottom: 15,
   },
   skillCard: {
-    backgroundColor: '#FDF5E6',
+    backgroundColor: "#FDF5E6",
     borderRadius: 12,
     padding: 15,
     marginBottom: 10,
     borderLeftWidth: 4,
-    borderLeftColor: '#FF8C00',
+    borderLeftColor: "#FF8C00",
   },
   activeSkillCard: {
-    backgroundColor: '#E3F2FD',
-    borderLeftColor: '#2196F3',
+    backgroundColor: "#E3F2FD",
+    borderLeftColor: "#2196F3",
     borderWidth: 2,
-    borderColor: '#2196F3',
+    borderColor: "#2196F3",
   },
   completeSkillCard: {
-    backgroundColor: '#E8F5E8',
-    borderLeftColor: '#4CAF50',
+    backgroundColor: "#E8F5E8",
+    borderLeftColor: "#4CAF50",
   },
   skillHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 10,
   },
   skillInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     flex: 1,
   },
   skillEmoji: {
@@ -413,22 +543,22 @@ const styles = StyleSheet.create({
   },
   skillName: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#8B4513',
+    fontWeight: "600",
+    color: "#8B4513",
     marginBottom: 2,
   },
   skillTime: {
     fontSize: 14,
-    color: '#A0522D',
+    color: "#A0522D",
   },
   plannedTime: {
     fontSize: 12,
-    color: '#2196F3',
-    fontWeight: '600',
-    fontStyle: 'italic',
+    color: "#2196F3",
+    fontWeight: "600",
+    fontStyle: "italic",
   },
   skillStatus: {
-    alignItems: 'center',
+    alignItems: "center",
   },
   completeIcon: {
     fontSize: 20,
@@ -436,38 +566,38 @@ const styles = StyleSheet.create({
   },
   progressText: {
     fontSize: 14,
-    fontWeight: 'bold',
-    color: '#FF8C00',
+    fontWeight: "bold",
+    color: "#FF8C00",
   },
   progressBar: {
-    width: '100%',
+    width: "100%",
     height: 6,
-    backgroundColor: '#DDD',
+    backgroundColor: "#DDD",
     borderRadius: 3,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   progressFill: {
-    height: '100%',
+    height: "100%",
     borderRadius: 3,
   },
   tipsSection: {
-    backgroundColor: '#FFF3E0',
+    backgroundColor: "#FFF3E0",
     margin: 20,
     padding: 20,
     borderRadius: 15,
     borderLeftWidth: 4,
-    borderLeftColor: '#FFB74D',
+    borderLeftColor: "#FFB74D",
   },
   tipsTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#F57C00',
+    fontWeight: "bold",
+    color: "#F57C00",
     marginBottom: 15,
-    textAlign: 'center',
+    textAlign: "center",
   },
   tipText: {
     fontSize: 14,
-    color: '#E65100',
+    color: "#E65100",
     marginBottom: 8,
     lineHeight: 20,
   },

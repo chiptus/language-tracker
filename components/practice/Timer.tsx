@@ -1,9 +1,22 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Pressable, Alert } from 'react-native';
+import {
+  TimerState,
+  saveTimerState,
+  getTimerState,
+  clearTimerState,
+  getElapsedTime,
+  cancelNotification,
+  createInitialTimerState,
+  setupAppStateListener,
+  removeAppStateListener,
+  handleAppStateChange,
+} from '../../utils/backgroundTimer';
 
 interface TimerProps {
   isRunning: boolean;
   targetMinutes?: number;
+  skillType: string;
   onTimeUpdate: (secondsElapsed: number) => void;
   onStart: () => void;
   onPause: () => void;
@@ -14,28 +27,76 @@ interface TimerProps {
 export default function Timer({ 
   isRunning, 
   targetMinutes = 5,
+  skillType,
   onTimeUpdate,
   onStart,
   onPause,
   onReset,
   onComplete
 }: TimerProps) {
-  const [secondsElapsed, setSecondsElapsed] = useState(0);
+  const [timerState, setTimerState] = useState<TimerState | null>(null);
   const [selectedMinutes, setSelectedMinutes] = useState(targetMinutes);
+  const [secondsElapsed, setSecondsElapsed] = useState(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const hasShownCompletionAlert = useRef(false);
   
   const totalSeconds = selectedMinutes * 60;
   const remainingSeconds = totalSeconds - secondsElapsed;
 
+  // Initialize timer state and app state listener
   useEffect(() => {
-    if (isRunning) {
+    const initTimer = async () => {
+      let state = await getTimerState();
+      if (!state || state.skillType !== skillType || state.targetDurationMs !== selectedMinutes * 60 * 1000) {
+        state = createInitialTimerState(selectedMinutes, skillType);
+        await saveTimerState(state);
+      }
+      setTimerState(state);
+      
+      // Calculate initial elapsed time
+      if (state.startTime) {
+        const elapsed = getElapsedTime(state);
+        setSecondsElapsed(Math.floor(elapsed / 1000));
+      }
+    };
+    
+    initTimer();
+    
+    // Setup app state listener
+    setupAppStateListener(async (nextAppState: string) => {
+      await handleAppStateChange(nextAppState);
+      if (nextAppState === 'active') {
+        // Recalculate elapsed time when app becomes active
+        const state = await getTimerState();
+        if (state && state.startTime) {
+          const elapsed = getElapsedTime(state);
+          setSecondsElapsed(Math.floor(elapsed / 1000));
+          setTimerState(state);
+        }
+      }
+    });
+    
+    return () => {
+      removeAppStateListener();
+    };
+  }, [skillType, selectedMinutes]);
+  
+  // Main timer interval effect
+  useEffect(() => {
+    if (isRunning && timerState?.startTime) {
       intervalRef.current = setInterval(() => {
-        setSecondsElapsed(prevElapsed => {
-          const newElapsed = prevElapsed + 1;
-          const newRemaining = totalSeconds - newElapsed;
+        if (timerState) {
+          const elapsed = getElapsedTime(timerState);
+          const newSecondsElapsed = Math.floor(elapsed / 1000);
+          setSecondsElapsed(newSecondsElapsed);
           
-          // Timer completed (show alert only once when crossing the threshold)
-          if (newRemaining <= 0 && prevElapsed < totalSeconds) {
+          // Call onTimeUpdate
+          setTimeout(() => onTimeUpdate(newSecondsElapsed), 0);
+          
+          // Check if timer completed
+          const newRemaining = totalSeconds - newSecondsElapsed;
+          if (newRemaining <= 0 && !hasShownCompletionAlert.current) {
+            hasShownCompletionAlert.current = true;
             Alert.alert(
               '¡Tiempo completado! / Time\'s up!',
               `¡Excelente trabajo! Has completado ${selectedMinutes} minutos de práctica. Puedes continuar o guardar tu sesión. / Great job! You've completed ${selectedMinutes} minutes of practice. You can continue or save your session.`,
@@ -45,12 +106,7 @@ export default function Timer({
               ]
             );
           }
-          
-          // Call onTimeUpdate outside of the setState callback
-          setTimeout(() => onTimeUpdate(newElapsed), 0);
-          
-          return newElapsed;
-        });
+        }
       }, 1000);
     } else {
       if (intervalRef.current) {
@@ -64,11 +120,20 @@ export default function Timer({
         clearInterval(intervalRef.current);
       }
     };
-  }, [isRunning, totalSeconds, selectedMinutes, onTimeUpdate, onComplete]);
+  }, [isRunning, timerState, totalSeconds, selectedMinutes, onTimeUpdate, onComplete]);
 
+  // Reset timer when selected minutes change
   useEffect(() => {
-    setSecondsElapsed(0);
-  }, [selectedMinutes]);
+    const resetTimer = async () => {
+      hasShownCompletionAlert.current = false;
+      const newState = createInitialTimerState(selectedMinutes, skillType);
+      await saveTimerState(newState);
+      setTimerState(newState);
+      setSecondsElapsed(0);
+    };
+    
+    resetTimer();
+  }, [selectedMinutes, skillType]);
 
   const formatTime = (totalSeconds: number): string => {
     const hours = Math.floor(totalSeconds / 3600);
@@ -81,15 +146,42 @@ export default function Timer({
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const handleReset = () => {
+  const handleReset = async () => {
+    hasShownCompletionAlert.current = false;
+    
+    // Cancel any scheduled notification
+    if (timerState?.scheduledNotificationId) {
+      await cancelNotification(timerState.scheduledNotificationId);
+    }
+    
+    // Clear timer state
+    await clearTimerState();
+    
+    // Create new initial state
+    const newState = createInitialTimerState(selectedMinutes, skillType);
+    await saveTimerState(newState);
+    setTimerState(newState);
     setSecondsElapsed(0);
+    
     onReset();
   };
 
-  const handleTimeSelect = (minutes: number) => {
+  const handleTimeSelect = async (minutes: number) => {
     if (!isRunning) {
+      hasShownCompletionAlert.current = false;
+      
+      // Cancel any existing notification
+      if (timerState?.scheduledNotificationId) {
+        await cancelNotification(timerState.scheduledNotificationId);
+      }
+      
       setSelectedMinutes(minutes);
       setSecondsElapsed(0);
+      
+      // Create new timer state with new duration
+      const newState = createInitialTimerState(minutes, skillType);
+      await saveTimerState(newState);
+      setTimerState(newState);
     }
   };
 
